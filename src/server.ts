@@ -1,3 +1,5 @@
+import 'reflect-metadata';
+import './config/container'; // Import DI container configuration
 import express from 'express';
 import logger from './utils/logger';
 import sequelize from './models';
