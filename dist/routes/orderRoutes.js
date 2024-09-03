@@ -2,10 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const orderController_1 = require("../controllers/orderController");
+const validationMiddleware_1 = require("../middlewares/validationMiddleware");
+const CreateOrderDto_1 = require("../dtos/CreateOrderDto");
+const UpdateOrderDto_1 = require("../dtos/UpdateOrderDto");
 const router = (0, express_1.Router)();
 router.get('/', orderController_1.getOrdersController);
 router.get('/:id', orderController_1.getOrderDetailsController);
-router.post('/', orderController_1.createOrderController);
-router.put('/:id', orderController_1.editOrderController);
+router.post('/', (0, validationMiddleware_1.validationMiddleware)(CreateOrderDto_1.CreateOrderDto), orderController_1.createOrderController);
+router.put('/:id', (0, validationMiddleware_1.validationMiddleware)(UpdateOrderDto_1.UpdateOrderDto), orderController_1.editOrderController);
 router.delete('/:id', orderController_1.deleteOrderController);
 exports.default = router;
