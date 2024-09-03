@@ -35,7 +35,12 @@ const getOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         };
     }
     try {
-        const { count, rows } = yield order_1.default.findAndCountAll({
+        // Count the total number of orders matching the query
+        const total = yield order_1.default.count({ where: whereClause });
+        // Calculate the correct pagination offset
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        // Fetch the orders with pagination and include related data
+        const orders = yield order_1.default.findAll({
             where: whereClause,
             include: [
                 {
@@ -44,18 +49,22 @@ const getOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 },
             ],
             limit: parseInt(limit),
-            offset: (parseInt(page) - 1) * parseInt(limit),
+            offset,
         });
-        const formattedRows = rows.map((order) => (Object.assign(Object.assign({}, order.toJSON()), { orderDate: (0, date_fns_1.format)(order.orderDate, "yyyy-MM-dd'T'HH:mm:ssXXX") })));
+        // Format the orders for the response
+        const formattedOrders = orders.map((order) => (Object.assign(Object.assign({}, order.toJSON()), { orderDate: (0, date_fns_1.format)(order.orderDate, "yyyy-MM-dd'T'HH:mm:ssXXX") })));
+        // Calculate the total number of pages
+        const pages = Math.ceil(total / parseInt(limit));
         logger_1.default.info('Orders fetched successfully', {
             customerName,
             orderDate,
-            totalOrders: count,
+            total,
+            pages,
         });
         res.status(200).json({
-            total: count,
-            pages: Math.ceil(count / parseInt(limit)),
-            data: formattedRows,
+            total,
+            pages,
+            data: formattedOrders,
         });
     }
     catch (error) {
@@ -123,10 +132,10 @@ const createOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.createOrder = createOrder;
-// Edit an Order (Cannot change customer name)
+// Edit an Order
 const editOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
-    const { products } = req.body;
+    const { customerName, products } = req.body;
     try {
         const order = yield order_1.default.findByPk(id);
         if (!order) {
@@ -134,6 +143,11 @@ const editOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             res.status(404).json({ error: 'Order not found' });
             return;
         }
+        // Update the customer name if provided
+        if (customerName) {
+            order.customerName = customerName;
+        }
+        // Remove existing products in the order and calculate new total price
         yield orderproduct_1.default.destroy({ where: { orderId: id } });
         let totalPrice = 0;
         for (const product of products) {
@@ -148,9 +162,10 @@ const editOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             });
             totalPrice += orderProduct.totalPrice;
         }
+        // Update the total price and save the order
         order.totalPrice = totalPrice;
         yield order.save();
-        logger_1.default.info('Order updated successfully', { orderId: id });
+        logger_1.default.info('Order updated successfully', { orderId: id, customerName: order.customerName });
         res.json(order);
     }
     catch (error) {

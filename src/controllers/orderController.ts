@@ -26,7 +26,14 @@ export const getOrders = async (req: Request, res: Response) => {
   }
 
   try {
-    const { count, rows } = await Order.findAndCountAll({
+    // Count the total number of orders matching the query
+    const total = await Order.count({ where: whereClause });
+
+    // Calculate the correct pagination offset
+    const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    // Fetch the orders with pagination and include related data
+    const orders = await Order.findAll({
       where: whereClause,
       include: [
         {
@@ -35,24 +42,29 @@ export const getOrders = async (req: Request, res: Response) => {
         },
       ],
       limit: parseInt(limit as string),
-      offset: (parseInt(page as string) - 1) * parseInt(limit as string),
+      offset,
     });
 
-    const formattedRows = rows.map((order) => ({
+    // Format the orders for the response
+    const formattedOrders = orders.map((order) => ({
       ...order.toJSON(),
       orderDate: format(order.orderDate, "yyyy-MM-dd'T'HH:mm:ssXXX"),
     }));
 
+    // Calculate the total number of pages
+    const pages = Math.ceil(total / parseInt(limit as string));
+
     logger.info('Orders fetched successfully', {
       customerName,
       orderDate,
-      totalOrders: count,
+      total,
+      pages,
     });
 
     res.status(200).json({
-      total: count,
-      pages: Math.ceil(count / parseInt(limit as string)),
-      data: formattedRows,
+      total,
+      pages,
+      data: formattedOrders,
     });
   } catch (error) {
     logger.error('Error fetching orders', { error });
@@ -128,10 +140,10 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-// Edit an Order (Cannot change customer name)
+// Edit an Order
 export const editOrder = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { products } = req.body;
+  const { customerName, products } = req.body;
 
   try {
     const order = await Order.findByPk(id);
@@ -141,6 +153,12 @@ export const editOrder = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Update the customer name if provided
+    if (customerName) {
+      order.customerName = customerName;
+    }
+
+    // Remove existing products in the order and calculate new total price
     await OrderProduct.destroy({ where: { orderId: id } });
     let totalPrice = 0;
 
@@ -158,16 +176,18 @@ export const editOrder = async (req: Request, res: Response): Promise<void> => {
       totalPrice += orderProduct.totalPrice;
     }
 
+    // Update the total price and save the order
     order.totalPrice = totalPrice;
     await order.save();
 
-    logger.info('Order updated successfully', { orderId: id });
+    logger.info('Order updated successfully', { orderId: id, customerName: order.customerName });
     res.json(order);
   } catch (error) {
     logger.error('Failed to update order', { error });
     res.status(500).json({ error: 'Failed to update order' });
   }
 };
+
 
 // Delete an Order
 export const deleteOrder = async (req: Request, res: Response): Promise<void> => {
