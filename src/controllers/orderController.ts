@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { container } from 'tsyringe';
 import { IOrderService } from '../services/interfaces'; // Import the interface
 import logger from '../utils/logger';
+import { CreateOrderDto } from '../dtos/CreateOrderDto';
+import { UpdateOrderDto } from '../dtos/UpdateOrderDto';
 
 // Resolve OrderService from the container using the interface
 const orderService = container.resolve<IOrderService>('OrderService');
@@ -55,17 +57,11 @@ export const getOrderDetailsController = async (req: Request, res: Response): Pr
 };
 
 export const createOrderController = async (req: Request, res: Response): Promise<void> => {
-  const { customerName, products } = req.body;
-
-  if (!products || products.length === 0) {
-    logger.warn('Attempted to create order without products', { customerName });
-    res.status(400).json({ error: 'Order must contain at least one product.' });
-    return;
-  }
+  const createOrderDto: CreateOrderDto = req.body;
 
   try {
-    const order = await orderService.createNewOrder(customerName, products);
-    logger.info('Order created successfully', { orderId: order.id, customerName });
+    const order = await orderService.createNewOrder(createOrderDto.customerName, createOrderDto.products);
+    logger.info('Order created successfully', { orderId: order.id, customerName: createOrderDto.customerName });
     res.status(201).json(order);
   } catch (error) {
     logger.error('Error creating order', { error });
@@ -75,10 +71,11 @@ export const createOrderController = async (req: Request, res: Response): Promis
 
 export const editOrderController = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { customerName, products } = req.body;
+  const updateOrderDto: UpdateOrderDto = req.body;
 
   try {
-    const order = await orderService.updateExistingOrder(parseInt(id), customerName, products);
+    const customerName = updateOrderDto.customerName || ""; // Default to empty string if undefined
+    const order = await orderService.updateExistingOrder(parseInt(id), customerName, updateOrderDto.products);
     logger.info('Order updated successfully', { orderId: id, customerName: order.customerName });
     res.json(order);
   } catch (error) {

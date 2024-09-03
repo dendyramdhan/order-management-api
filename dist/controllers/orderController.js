@@ -58,15 +58,10 @@ const getOrderDetailsController = (req, res) => __awaiter(void 0, void 0, void 0
 });
 exports.getOrderDetailsController = getOrderDetailsController;
 const createOrderController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { customerName, products } = req.body;
-    if (!products || products.length === 0) {
-        logger_1.default.warn('Attempted to create order without products', { customerName });
-        res.status(400).json({ error: 'Order must contain at least one product.' });
-        return;
-    }
+    const createOrderDto = req.body;
     try {
-        const order = yield orderService.createNewOrder(customerName, products);
-        logger_1.default.info('Order created successfully', { orderId: order.id, customerName });
+        const order = yield orderService.createNewOrder(createOrderDto.customerName, createOrderDto.products);
+        logger_1.default.info('Order created successfully', { orderId: order.id, customerName: createOrderDto.customerName });
         res.status(201).json(order);
     }
     catch (error) {
@@ -77,9 +72,10 @@ const createOrderController = (req, res) => __awaiter(void 0, void 0, void 0, fu
 exports.createOrderController = createOrderController;
 const editOrderController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
-    const { customerName, products } = req.body;
+    const updateOrderDto = req.body;
     try {
-        const order = yield orderService.updateExistingOrder(parseInt(id), customerName, products);
+        const customerName = updateOrderDto.customerName || ""; // Default to empty string if undefined
+        const order = yield orderService.updateExistingOrder(parseInt(id), customerName, updateOrderDto.products);
         logger_1.default.info('Order updated successfully', { orderId: id, customerName: order.customerName });
         res.json(order);
     }
