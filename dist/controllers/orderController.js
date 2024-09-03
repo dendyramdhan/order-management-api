@@ -68,25 +68,30 @@ const createOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         return;
     }
     try {
-        const order = yield order_1.default.create({ customerName });
+        // Create the order without totalPrice initially
+        const order = yield order_1.default.create({ customerName, totalPrice: 0 });
         let totalPrice = 0;
+        // Iterate over products and create OrderProduct entries
         for (const product of products) {
             const dbProduct = yield product_1.default.findByPk(product.productId);
-            if (!dbProduct)
-                continue;
+            if (!dbProduct) {
+                res.status(400).json({ error: `Product with ID ${product.productId} not found.` });
+                return;
+            }
             const orderProduct = yield orderproduct_1.default.create({
                 orderId: order.id,
                 productId: product.productId,
                 quantity: product.quantity,
-                totalPrice: dbProduct.price * product.quantity
+                totalPrice: dbProduct.price * product.quantity,
             });
             totalPrice += orderProduct.totalPrice;
         }
-        order.totalPrice = totalPrice;
-        yield order.save();
+        // Update the order with the calculated totalPrice
+        yield order.update({ totalPrice });
         res.status(201).json(order);
     }
     catch (error) {
+        console.error('Error creating order:', error);
         res.status(500).json({ error: 'Failed to create order' });
     }
 });

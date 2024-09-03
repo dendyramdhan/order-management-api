@@ -58,28 +58,36 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
   }
 
   try {
-    const order = await Order.create({ customerName });
+    // Create the order without totalPrice initially
+    const order = await Order.create({ customerName, totalPrice: 0 });
+
     let totalPrice = 0;
 
+    // Iterate over products and create OrderProduct entries
     for (const product of products) {
       const dbProduct = await Product.findByPk(product.productId);
-      if (!dbProduct) continue;
+
+      if (!dbProduct) {
+        res.status(400).json({ error: `Product with ID ${product.productId} not found.` });
+        return;
+      }
 
       const orderProduct = await OrderProduct.create({
         orderId: order.id,
         productId: product.productId,
         quantity: product.quantity,
-        totalPrice: dbProduct.price * product.quantity
+        totalPrice: dbProduct.price * product.quantity,
       });
 
       totalPrice += orderProduct.totalPrice;
     }
 
-    order.totalPrice = totalPrice;
-    await order.save();
+    // Update the order with the calculated totalPrice
+    await order.update({ totalPrice });
 
     res.status(201).json(order);
   } catch (error) {
+    console.error('Error creating order:', error);
     res.status(500).json({ error: 'Failed to create order' });
   }
 };
