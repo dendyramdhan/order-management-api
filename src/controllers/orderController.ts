@@ -1,58 +1,21 @@
 import { Request, Response } from 'express';
-import { Op } from 'sequelize';
-import { parseISO, startOfDay, endOfDay, format } from 'date-fns';
-import Order from '../models/order';
-import Product from '../models/product';
-import OrderProduct from '../models/orderproduct';
+import { container } from 'tsyringe';
+import { IOrderService } from '../services/interfaces'; // Import the interface
 import logger from '../utils/logger';
 
-// View Order List
-export const getOrders = async (req: Request, res: Response) => {
+// Resolve OrderService from the container using the interface
+const orderService = container.resolve<IOrderService>('OrderService');
+
+export const getOrdersController = async (req: Request, res: Response): Promise<void> => {
   const { customerName, orderDate, page = 1, limit = 10 } = req.query;
 
-  const whereClause: any = {};
-
-  if (customerName) {
-    whereClause.customerName = {
-      [Op.like]: `%${customerName}%`,
-    };
-  }
-
-  if (orderDate) {
-    const parsedDate = parseISO(orderDate as string);
-    whereClause.orderDate = {
-      [Op.between]: [startOfDay(parsedDate), endOfDay(parsedDate)],
-    };
-  }
-
   try {
-    // Count the total number of orders matching the query
-    const total = await Order.count({ where: whereClause });
-
-    // Calculate the correct pagination offset
-    const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
-
-    // Fetch the orders with pagination and include related data
-    const orders = await Order.findAll({
-      where: whereClause,
-      include: [
-        {
-          model: OrderProduct,
-          include: [Product],
-        },
-      ],
-      limit: parseInt(limit as string),
-      offset,
-    });
-
-    // Format the orders for the response
-    const formattedOrders = orders.map((order) => ({
-      ...order.toJSON(),
-      orderDate: format(order.orderDate, "yyyy-MM-dd'T'HH:mm:ssXXX"),
-    }));
-
-    // Calculate the total number of pages
-    const pages = Math.ceil(total / parseInt(limit as string));
+    const { total, pages, orders } = await orderService.getOrders(
+      customerName as string,
+      orderDate as string,
+      parseInt(page as string),
+      parseInt(limit as string)
+    );
 
     logger.info('Orders fetched successfully', {
       customerName,
@@ -64,7 +27,7 @@ export const getOrders = async (req: Request, res: Response) => {
     res.status(200).json({
       total,
       pages,
-      data: formattedOrders,
+      data: orders,
     });
   } catch (error) {
     logger.error('Error fetching orders', { error });
@@ -72,13 +35,10 @@ export const getOrders = async (req: Request, res: Response) => {
   }
 };
 
-// View Order Details
-export const getOrderDetails = async (req: Request, res: Response): Promise<void> => {
+export const getOrderDetailsController = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const order = await Order.findByPk(id, {
-      include: [OrderProduct],
-    });
+    const order = await orderService.getOrderDetails(parseInt(id));
 
     if (!order) {
       logger.warn('Order not found', { orderId: id });
@@ -94,8 +54,7 @@ export const getOrderDetails = async (req: Request, res: Response): Promise<void
   }
 };
 
-// Create a New Order
-export const createOrder = async (req: Request, res: Response): Promise<void> => {
+export const createOrderController = async (req: Request, res: Response): Promise<void> => {
   const { customerName, products } = req.body;
 
   if (!products || products.length === 0) {
@@ -105,33 +64,7 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
   }
 
   try {
-    const order = await Order.create({ customerName, totalPrice: 0 });
-
-    let totalPrice = 0;
-
-    for (const product of products) {
-      const dbProduct = await Product.findByPk(product.productId);
-
-      if (!dbProduct) {
-        logger.warn('Product not found while creating order', {
-          productId: product.productId,
-        });
-        res.status(400).json({ error: `Product with ID ${product.productId} not found.` });
-        return;
-      }
-
-      const orderProduct = await OrderProduct.create({
-        orderId: order.id,
-        productId: product.productId,
-        quantity: product.quantity,
-        totalPrice: dbProduct.price * product.quantity,
-      });
-
-      totalPrice += orderProduct.totalPrice;
-    }
-
-    await order.update({ totalPrice });
-
+    const order = await orderService.createNewOrder(customerName, products);
     logger.info('Order created successfully', { orderId: order.id, customerName });
     res.status(201).json(order);
   } catch (error) {
@@ -140,46 +73,12 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-// Edit an Order
-export const editOrder = async (req: Request, res: Response): Promise<void> => {
+export const editOrderController = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { customerName, products } = req.body;
 
   try {
-    const order = await Order.findByPk(id);
-    if (!order) {
-      logger.warn('Order not found while editing', { orderId: id });
-      res.status(404).json({ error: 'Order not found' });
-      return;
-    }
-
-    // Update the customer name if provided
-    if (customerName) {
-      order.customerName = customerName;
-    }
-
-    // Remove existing products in the order and calculate new total price
-    await OrderProduct.destroy({ where: { orderId: id } });
-    let totalPrice = 0;
-
-    for (const product of products) {
-      const dbProduct = await Product.findByPk(product.productId);
-      if (!dbProduct) continue;
-
-      const orderProduct = await OrderProduct.create({
-        orderId: id,
-        productId: product.productId,
-        quantity: product.quantity,
-        totalPrice: dbProduct.price * product.quantity,
-      });
-
-      totalPrice += orderProduct.totalPrice;
-    }
-
-    // Update the total price and save the order
-    order.totalPrice = totalPrice;
-    await order.save();
-
+    const order = await orderService.updateExistingOrder(parseInt(id), customerName, products);
     logger.info('Order updated successfully', { orderId: id, customerName: order.customerName });
     res.json(order);
   } catch (error) {
@@ -188,23 +87,13 @@ export const editOrder = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-
-// Delete an Order
-export const deleteOrder = async (req: Request, res: Response): Promise<void> => {
+export const deleteOrderController = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
 
   try {
-    const order = await Order.findByPk(id);
-    if (!order) {
-      logger.warn('Order not found while deleting', { orderId: id });
-      res.status(404).json({ error: 'Order not found' });
-      return;
-    }
-
-    await Order.destroy({ where: { id } });
-
+    const result = await orderService.deleteExistingOrder(parseInt(id));
     logger.info('Order deleted successfully', { orderId: id });
-    res.json({ success: true });
+    res.json(result);
   } catch (error) {
     logger.error('Failed to delete order', { error });
     res.status(500).json({ error: 'Failed to delete order' });

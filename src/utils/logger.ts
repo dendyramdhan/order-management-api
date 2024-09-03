@@ -1,14 +1,12 @@
 import { createLogger, format, transports } from 'winston';
 import path from 'path';
 
-// Define the log format
 const logFormat = format.printf(({ timestamp, level, message }) => {
   return `${timestamp} [${level.toUpperCase()}]: ${message}`;
 });
 
-// Create the logger instance
 const logger = createLogger({
-  level: 'info', // Default log level
+  level: 'info',
   format: format.combine(
     format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     format.errors({ stack: true }),
@@ -17,14 +15,12 @@ const logger = createLogger({
     logFormat
   ),
   transports: [
-    // Log to console
     new transports.Console({
       format: format.combine(
         format.colorize(),
         format.simple()
       ),
     }),
-    // Log to file
     new transports.File({
       filename: path.join(__dirname, '../../logs/error.log'),
       level: 'error',
@@ -35,7 +31,6 @@ const logger = createLogger({
   ],
 });
 
-// If we're not in production then log debug level messages to the console
 if (process.env.NODE_ENV !== 'production') {
   logger.add(
     new transports.Console({
@@ -43,7 +38,7 @@ if (process.env.NODE_ENV !== 'production') {
         format.colorize(),
         format.simple()
       ),
-      level: 'debug', // Log debug level in non-production environments
+      level: 'debug',
     })
   );
 }
