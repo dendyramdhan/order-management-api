@@ -4,7 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const models_1 = __importDefault(require("./models")); // Import the sequelize instance to ensure it's initialized
+const logger_1 = __importDefault(require("./utils/logger"));
+const models_1 = __importDefault(require("./models"));
 const productRoutes_1 = __importDefault(require("./routes/productRoutes"));
 const orderRoutes_1 = __importDefault(require("./routes/orderRoutes"));
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
@@ -21,6 +22,6 @@ app.use('/orders', orderRoutes_1.default);
 const PORT = process.env.PORT || 3000;
 models_1.default.sync({ force: false }).then(() => {
     app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
+        logger_1.default.info(`Server is running on port ${PORT}`);
     });
 });

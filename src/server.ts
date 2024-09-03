@@ -1,5 +1,6 @@
 import express from 'express';
-import sequelize from './models'; // Import the sequelize instance to ensure it's initialized
+import logger from './utils/logger';
+import sequelize from './models';
 import productRoutes from './routes/productRoutes';
 import orderRoutes from './routes/orderRoutes';
 import swaggerUi from 'swagger-ui-express';
@@ -22,6 +23,6 @@ const PORT = process.env.PORT || 3000;
 
 sequelize.sync({ force: false }).then(() => {
   app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    logger.info(`Server is running on port ${PORT}`);
   });
 });
