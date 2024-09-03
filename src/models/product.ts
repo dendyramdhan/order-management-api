@@ -1,5 +1,4 @@
-import { Model, DataTypes } from 'sequelize';
-import sequelize from './index';
+import { Model, DataTypes, Sequelize } from 'sequelize';
 
 class Product extends Model {
   public id!: number;
@@ -7,21 +6,23 @@ class Product extends Model {
   public price!: number;
 }
 
-Product.init(
-  {
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false
+export const initProductModel = (sequelize: Sequelize) => {
+  Product.init(
+    {
+      name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      price: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
     },
-    price: {
-      type: DataTypes.INTEGER,
-      allowNull: false
+    {
+      sequelize,
+      modelName: 'Product',
     }
-  },
-  {
-    sequelize,
-    modelName: 'Product'
-  }
-);
+  );
+};
 
 export default Product;

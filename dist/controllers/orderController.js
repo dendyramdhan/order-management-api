@@ -12,10 +12,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createOrder = exports.getOrders = void 0;
+exports.deleteOrder = exports.editOrder = exports.createOrder = exports.getOrderDetails = exports.getOrders = void 0;
 const order_1 = __importDefault(require("../models/order"));
 const product_1 = __importDefault(require("../models/product"));
 const orderproduct_1 = __importDefault(require("../models/orderproduct"));
+// View Order List
 const getOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { customerName, orderDate, page = 1, limit = 10 } = req.query;
@@ -23,12 +24,12 @@ const getOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (customerName)
             where.customerName = customerName;
         if (orderDate)
-            where.createdAt = orderDate;
+            where.createdAt = new Date(orderDate);
         const orders = yield order_1.default.findAndCountAll({
             where,
             limit: Number(limit),
             offset: (Number(page) - 1) * Number(limit),
-            include: orderproduct_1.default
+            include: [orderproduct_1.default]
         });
         res.json({
             total: orders.count,
@@ -41,29 +42,103 @@ const getOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.getOrders = getOrders;
+// View Order Details
+const getOrderDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const order = yield order_1.default.findByPk(id, {
+            include: [orderproduct_1.default]
+        });
+        if (!order) {
+            res.status(404).json({ error: 'Order not found' });
+            return;
+        }
+        res.json(order);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to fetch order details' });
+    }
+});
+exports.getOrderDetails = getOrderDetails;
+// Create a New Order
 const createOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { customerName, products } = req.body;
     if (!products || products.length === 0) {
         res.status(400).json({ error: 'Order must contain at least one product.' });
         return;
     }
-    const order = yield order_1.default.create({ customerName });
-    let totalPrice = 0;
-    for (const product of products) {
-        const dbProduct = yield product_1.default.findByPk(product.productId);
-        if (!dbProduct)
-            continue;
-        const orderProduct = yield orderproduct_1.default.create({
-            orderId: order.id,
-            productId: product.productId,
-            quantity: product.quantity,
-            totalPrice: dbProduct.price * product.quantity
-        });
-        totalPrice += orderProduct.totalPrice;
+    try {
+        const order = yield order_1.default.create({ customerName });
+        let totalPrice = 0;
+        for (const product of products) {
+            const dbProduct = yield product_1.default.findByPk(product.productId);
+            if (!dbProduct)
+                continue;
+            const orderProduct = yield orderproduct_1.default.create({
+                orderId: order.id,
+                productId: product.productId,
+                quantity: product.quantity,
+                totalPrice: dbProduct.price * product.quantity
+            });
+            totalPrice += orderProduct.totalPrice;
+        }
+        order.totalPrice = totalPrice;
+        yield order.save();
+        res.status(201).json(order);
     }
-    order.totalPrice = totalPrice;
-    yield order.save();
-    res.json(order);
+    catch (error) {
+        res.status(500).json({ error: 'Failed to create order' });
+    }
 });
 exports.createOrder = createOrder;
-// Add other methods for editing, deleting, and viewing order details similarly
+// Edit an Order (Cannot change customer name)
+const editOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const { products } = req.body;
+    try {
+        const order = yield order_1.default.findByPk(id);
+        if (!order) {
+            res.status(404).json({ error: 'Order not found' });
+            return;
+        }
+        // Update products in the order
+        yield orderproduct_1.default.destroy({ where: { orderId: id } });
+        let totalPrice = 0;
+        for (const product of products) {
+            const dbProduct = yield product_1.default.findByPk(product.productId);
+            if (!dbProduct)
+                continue;
+            const orderProduct = yield orderproduct_1.default.create({
+                orderId: id,
+                productId: product.productId,
+                quantity: product.quantity,
+                totalPrice: dbProduct.price * product.quantity
+            });
+            totalPrice += orderProduct.totalPrice;
+        }
+        order.totalPrice = totalPrice;
+        yield order.save();
+        res.json(order);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to update order' });
+    }
+});
+exports.editOrder = editOrder;
+// Delete an Order
+const deleteOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    try {
+        const order = yield order_1.default.findByPk(id);
+        if (!order) {
+            res.status(404).json({ error: 'Order not found' });
+            return;
+        }
+        yield order_1.default.destroy({ where: { id } });
+        res.json({ success: true });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to delete order' });
+    }
+});
+exports.deleteOrder = deleteOrder;
