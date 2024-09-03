@@ -18,6 +18,7 @@ const date_fns_1 = require("date-fns");
 const order_1 = __importDefault(require("../models/order"));
 const product_1 = __importDefault(require("../models/product"));
 const orderproduct_1 = __importDefault(require("../models/orderproduct"));
+const logger_1 = __importDefault(require("../utils/logger"));
 // View Order List
 const getOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { customerName, orderDate, page = 1, limit = 10 } = req.query;
@@ -45,8 +46,11 @@ const getOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             limit: parseInt(limit),
             offset: (parseInt(page) - 1) * parseInt(limit),
         });
-        const formattedRows = rows.map((order) => {
-            return Object.assign(Object.assign({}, order.toJSON()), { orderDate: (0, date_fns_1.format)(order.orderDate, "yyyy-MM-dd'T'HH:mm:ssXXX") });
+        const formattedRows = rows.map((order) => (Object.assign(Object.assign({}, order.toJSON()), { orderDate: (0, date_fns_1.format)(order.orderDate, "yyyy-MM-dd'T'HH:mm:ssXXX") })));
+        logger_1.default.info('Orders fetched successfully', {
+            customerName,
+            orderDate,
+            totalOrders: count,
         });
         res.status(200).json({
             total: count,
@@ -55,7 +59,7 @@ const getOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     catch (error) {
-        console.error('Error fetching orders:', error);
+        logger_1.default.error('Error fetching orders', { error });
         res.status(500).json({ error: 'Failed to fetch orders' });
     }
 });
@@ -65,15 +69,18 @@ const getOrderDetails = (req, res) => __awaiter(void 0, void 0, void 0, function
     try {
         const { id } = req.params;
         const order = yield order_1.default.findByPk(id, {
-            include: [orderproduct_1.default]
+            include: [orderproduct_1.default],
         });
         if (!order) {
+            logger_1.default.warn('Order not found', { orderId: id });
             res.status(404).json({ error: 'Order not found' });
             return;
         }
+        logger_1.default.info('Order details fetched successfully', { orderId: id });
         res.json(order);
     }
     catch (error) {
+        logger_1.default.error('Failed to fetch order details', { error });
         res.status(500).json({ error: 'Failed to fetch order details' });
     }
 });
@@ -82,17 +89,19 @@ exports.getOrderDetails = getOrderDetails;
 const createOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { customerName, products } = req.body;
     if (!products || products.length === 0) {
+        logger_1.default.warn('Attempted to create order without products', { customerName });
         res.status(400).json({ error: 'Order must contain at least one product.' });
         return;
     }
     try {
-        // Create the order without totalPrice initially
         const order = yield order_1.default.create({ customerName, totalPrice: 0 });
         let totalPrice = 0;
-        // Iterate over products and create OrderProduct entries
         for (const product of products) {
             const dbProduct = yield product_1.default.findByPk(product.productId);
             if (!dbProduct) {
+                logger_1.default.warn('Product not found while creating order', {
+                    productId: product.productId,
+                });
                 res.status(400).json({ error: `Product with ID ${product.productId} not found.` });
                 return;
             }
@@ -104,12 +113,12 @@ const createOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             });
             totalPrice += orderProduct.totalPrice;
         }
-        // Update the order with the calculated totalPrice
         yield order.update({ totalPrice });
+        logger_1.default.info('Order created successfully', { orderId: order.id, customerName });
         res.status(201).json(order);
     }
     catch (error) {
-        console.error('Error creating order:', error);
+        logger_1.default.error('Error creating order', { error });
         res.status(500).json({ error: 'Failed to create order' });
     }
 });
@@ -121,10 +130,10 @@ const editOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const order = yield order_1.default.findByPk(id);
         if (!order) {
+            logger_1.default.warn('Order not found while editing', { orderId: id });
             res.status(404).json({ error: 'Order not found' });
             return;
         }
-        // Update products in the order
         yield orderproduct_1.default.destroy({ where: { orderId: id } });
         let totalPrice = 0;
         for (const product of products) {
@@ -135,15 +144,17 @@ const editOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 orderId: id,
                 productId: product.productId,
                 quantity: product.quantity,
-                totalPrice: dbProduct.price * product.quantity
+                totalPrice: dbProduct.price * product.quantity,
             });
             totalPrice += orderProduct.totalPrice;
         }
         order.totalPrice = totalPrice;
         yield order.save();
+        logger_1.default.info('Order updated successfully', { orderId: id });
         res.json(order);
     }
     catch (error) {
+        logger_1.default.error('Failed to update order', { error });
         res.status(500).json({ error: 'Failed to update order' });
     }
 });
@@ -154,13 +165,16 @@ const deleteOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     try {
         const order = yield order_1.default.findByPk(id);
         if (!order) {
+            logger_1.default.warn('Order not found while deleting', { orderId: id });
             res.status(404).json({ error: 'Order not found' });
             return;
         }
         yield order_1.default.destroy({ where: { id } });
+        logger_1.default.info('Order deleted successfully', { orderId: id });
         res.json({ success: true });
     }
     catch (error) {
+        logger_1.default.error('Failed to delete order', { error });
         res.status(500).json({ error: 'Failed to delete order' });
     }
 });

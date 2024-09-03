@@ -4,6 +4,7 @@ import { parseISO, startOfDay, endOfDay, format } from 'date-fns';
 import Order from '../models/order';
 import Product from '../models/product';
 import OrderProduct from '../models/orderproduct';
+import logger from '../utils/logger';
 
 // View Order List
 export const getOrders = async (req: Request, res: Response) => {
@@ -37,11 +38,15 @@ export const getOrders = async (req: Request, res: Response) => {
       offset: (parseInt(page as string) - 1) * parseInt(limit as string),
     });
 
-    const formattedRows = rows.map((order) => {
-      return {
-        ...order.toJSON(),
-        orderDate: format(order.orderDate, "yyyy-MM-dd'T'HH:mm:ssXXX"), // Include both date and time in the response
-      };
+    const formattedRows = rows.map((order) => ({
+      ...order.toJSON(),
+      orderDate: format(order.orderDate, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+    }));
+
+    logger.info('Orders fetched successfully', {
+      customerName,
+      orderDate,
+      totalOrders: count,
     });
 
     res.status(200).json({
@@ -50,7 +55,7 @@ export const getOrders = async (req: Request, res: Response) => {
       data: formattedRows,
     });
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    logger.error('Error fetching orders', { error });
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 };
@@ -60,16 +65,19 @@ export const getOrderDetails = async (req: Request, res: Response): Promise<void
   try {
     const { id } = req.params;
     const order = await Order.findByPk(id, {
-      include: [OrderProduct]
+      include: [OrderProduct],
     });
 
     if (!order) {
+      logger.warn('Order not found', { orderId: id });
       res.status(404).json({ error: 'Order not found' });
       return;
     }
 
+    logger.info('Order details fetched successfully', { orderId: id });
     res.json(order);
   } catch (error) {
+    logger.error('Failed to fetch order details', { error });
     res.status(500).json({ error: 'Failed to fetch order details' });
   }
 };
@@ -79,21 +87,23 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
   const { customerName, products } = req.body;
 
   if (!products || products.length === 0) {
+    logger.warn('Attempted to create order without products', { customerName });
     res.status(400).json({ error: 'Order must contain at least one product.' });
     return;
   }
 
   try {
-    // Create the order without totalPrice initially
     const order = await Order.create({ customerName, totalPrice: 0 });
 
     let totalPrice = 0;
 
-    // Iterate over products and create OrderProduct entries
     for (const product of products) {
       const dbProduct = await Product.findByPk(product.productId);
 
       if (!dbProduct) {
+        logger.warn('Product not found while creating order', {
+          productId: product.productId,
+        });
         res.status(400).json({ error: `Product with ID ${product.productId} not found.` });
         return;
       }
@@ -108,12 +118,12 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       totalPrice += orderProduct.totalPrice;
     }
 
-    // Update the order with the calculated totalPrice
     await order.update({ totalPrice });
 
+    logger.info('Order created successfully', { orderId: order.id, customerName });
     res.status(201).json(order);
   } catch (error) {
-    console.error('Error creating order:', error);
+    logger.error('Error creating order', { error });
     res.status(500).json({ error: 'Failed to create order' });
   }
 };
@@ -126,11 +136,11 @@ export const editOrder = async (req: Request, res: Response): Promise<void> => {
   try {
     const order = await Order.findByPk(id);
     if (!order) {
+      logger.warn('Order not found while editing', { orderId: id });
       res.status(404).json({ error: 'Order not found' });
       return;
     }
 
-    // Update products in the order
     await OrderProduct.destroy({ where: { orderId: id } });
     let totalPrice = 0;
 
@@ -142,7 +152,7 @@ export const editOrder = async (req: Request, res: Response): Promise<void> => {
         orderId: id,
         productId: product.productId,
         quantity: product.quantity,
-        totalPrice: dbProduct.price * product.quantity
+        totalPrice: dbProduct.price * product.quantity,
       });
 
       totalPrice += orderProduct.totalPrice;
@@ -151,8 +161,10 @@ export const editOrder = async (req: Request, res: Response): Promise<void> => {
     order.totalPrice = totalPrice;
     await order.save();
 
+    logger.info('Order updated successfully', { orderId: id });
     res.json(order);
   } catch (error) {
+    logger.error('Failed to update order', { error });
     res.status(500).json({ error: 'Failed to update order' });
   }
 };
@@ -164,14 +176,17 @@ export const deleteOrder = async (req: Request, res: Response): Promise<void> =>
   try {
     const order = await Order.findByPk(id);
     if (!order) {
+      logger.warn('Order not found while deleting', { orderId: id });
       res.status(404).json({ error: 'Order not found' });
       return;
     }
 
     await Order.destroy({ where: { id } });
 
+    logger.info('Order deleted successfully', { orderId: id });
     res.json({ success: true });
   } catch (error) {
+    logger.error('Failed to delete order', { error });
     res.status(500).json({ error: 'Failed to delete order' });
   }
 };
