@@ -1,30 +1,56 @@
 import { Request, Response } from 'express';
+import { Op } from 'sequelize';
+import { parseISO, startOfDay, endOfDay, format } from 'date-fns';
 import Order from '../models/order';
 import Product from '../models/product';
 import OrderProduct from '../models/orderproduct';
 
 // View Order List
-export const getOrders = async (req: Request, res: Response): Promise<void> => {
+export const getOrders = async (req: Request, res: Response) => {
+  const { customerName, orderDate, page = 1, limit = 10 } = req.query;
+
+  const whereClause: any = {};
+
+  if (customerName) {
+    whereClause.customerName = {
+      [Op.like]: `%${customerName}%`,
+    };
+  }
+
+  if (orderDate) {
+    const parsedDate = parseISO(orderDate as string);
+    whereClause.orderDate = {
+      [Op.between]: [startOfDay(parsedDate), endOfDay(parsedDate)],
+    };
+  }
+
   try {
-    const { customerName, orderDate, page = 1, limit = 10 } = req.query;
-    const where: any = {};
-
-    if (customerName) where.customerName = customerName;
-    if (orderDate) where.createdAt = new Date(orderDate as string);
-
-    const orders = await Order.findAndCountAll({
-      where,
-      limit: Number(limit),
-      offset: (Number(page) - 1) * Number(limit),
-      include: [OrderProduct]
+    const { count, rows } = await Order.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: OrderProduct,
+          include: [Product],
+        },
+      ],
+      limit: parseInt(limit as string),
+      offset: (parseInt(page as string) - 1) * parseInt(limit as string),
     });
 
-    res.json({
-      total: orders.count,
-      pages: Math.ceil(orders.count / Number(limit)),
-      data: orders.rows
+    const formattedRows = rows.map((order) => {
+      return {
+        ...order.toJSON(),
+        orderDate: format(order.orderDate, "yyyy-MM-dd'T'HH:mm:ssXXX"), // Include both date and time in the response
+      };
+    });
+
+    res.status(200).json({
+      total: count,
+      pages: Math.ceil(count / parseInt(limit as string)),
+      data: formattedRows,
     });
   } catch (error) {
+    console.error('Error fetching orders:', error);
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 };
