@@ -13,31 +13,49 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteOrder = exports.editOrder = exports.createOrder = exports.getOrderDetails = exports.getOrders = void 0;
+const sequelize_1 = require("sequelize");
+const date_fns_1 = require("date-fns");
 const order_1 = __importDefault(require("../models/order"));
 const product_1 = __importDefault(require("../models/product"));
 const orderproduct_1 = __importDefault(require("../models/orderproduct"));
 // View Order List
 const getOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { customerName, orderDate, page = 1, limit = 10 } = req.query;
+    const whereClause = {};
+    if (customerName) {
+        whereClause.customerName = {
+            [sequelize_1.Op.like]: `%${customerName}%`,
+        };
+    }
+    if (orderDate) {
+        const parsedDate = (0, date_fns_1.parseISO)(orderDate);
+        whereClause.orderDate = {
+            [sequelize_1.Op.between]: [(0, date_fns_1.startOfDay)(parsedDate), (0, date_fns_1.endOfDay)(parsedDate)],
+        };
+    }
     try {
-        const { customerName, orderDate, page = 1, limit = 10 } = req.query;
-        const where = {};
-        if (customerName)
-            where.customerName = customerName;
-        if (orderDate)
-            where.createdAt = new Date(orderDate);
-        const orders = yield order_1.default.findAndCountAll({
-            where,
-            limit: Number(limit),
-            offset: (Number(page) - 1) * Number(limit),
-            include: [orderproduct_1.default]
+        const { count, rows } = yield order_1.default.findAndCountAll({
+            where: whereClause,
+            include: [
+                {
+                    model: orderproduct_1.default,
+                    include: [product_1.default],
+                },
+            ],
+            limit: parseInt(limit),
+            offset: (parseInt(page) - 1) * parseInt(limit),
         });
-        res.json({
-            total: orders.count,
-            pages: Math.ceil(orders.count / Number(limit)),
-            data: orders.rows
+        const formattedRows = rows.map((order) => {
+            return Object.assign(Object.assign({}, order.toJSON()), { orderDate: (0, date_fns_1.format)(order.orderDate, "yyyy-MM-dd'T'HH:mm:ssXXX") });
+        });
+        res.status(200).json({
+            total: count,
+            pages: Math.ceil(count / parseInt(limit)),
+            data: formattedRows,
         });
     }
     catch (error) {
+        console.error('Error fetching orders:', error);
         res.status(500).json({ error: 'Failed to fetch orders' });
     }
 });

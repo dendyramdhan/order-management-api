@@ -1,18 +1,11 @@
 import { Sequelize, Dialect } from 'sequelize';
 import config from '../../config/config.json';
+import Order from './order';
+import Product from './product';
+import OrderProduct from './orderproduct';
 
-// Define Sequelize configuration interface
-interface SequelizeConfig {
-  username: string;
-  password: string | null;
-  database: string;
-  host: string;
-  dialect: Dialect;
-  storage: string;
-}
-
-// Load and cast the configuration
-const dbConfig: SequelizeConfig = {
+// Define Sequelize configuration
+const dbConfig = {
   username: config.development.username,
   password: config.development.password,
   database: config.development.database,
@@ -25,7 +18,7 @@ const dbConfig: SequelizeConfig = {
 const sequelize = new Sequelize(
   dbConfig.database,
   dbConfig.username,
-  dbConfig.password || undefined, // Handle null password by converting to undefined
+  dbConfig.password || undefined,
   {
     host: dbConfig.host,
     dialect: dbConfig.dialect,
@@ -33,19 +26,15 @@ const sequelize = new Sequelize(
   }
 );
 
-// Import models and initialize them with the sequelize instance
-import Product, { initProductModel } from './product';
-import Order, { initOrderModel } from './order';
-import OrderProduct, { initOrderProductModel } from './orderproduct';
+// Initialize models
+Order.initModel(sequelize);
+Product.initModel(sequelize);
+OrderProduct.initModel(sequelize);
 
-initProductModel(sequelize);
-initOrderModel(sequelize);
-initOrderProductModel(sequelize);
+// Set up associations
+Order.associate();
+Product.associate();
+OrderProduct.associate();
 
-// Define associations
-Order.belongsToMany(Product, { through: OrderProduct });
-Product.belongsToMany(Order, { through: OrderProduct });
-
-// Export the Sequelize instance and models
 export { sequelize, Product, Order, OrderProduct };
 export default sequelize;
