@@ -1,28 +1,18 @@
 import { Sequelize, Dialect } from 'sequelize';
-import config from '../../config/config.json';
+import config from '../config/database';
 import Order from './order';
 import Product from './product';
 import OrderProduct from './orderproduct';
 
-// Define Sequelize configuration
-const dbConfig = {
-  username: config.development.username,
-  password: config.development.password,
-  database: config.development.database,
-  host: config.development.host,
-  dialect: config.development.dialect as Dialect,
-  storage: config.development.storage,
-};
-
-// Initialize Sequelize
+// Initialize Sequelize using the config for the current environment
 const sequelize = new Sequelize(
-  dbConfig.database,
-  dbConfig.username,
-  dbConfig.password || undefined,
+  config.database,
+  config.username,
+  config.password || undefined,
   {
-    host: dbConfig.host,
-    dialect: dbConfig.dialect,
-    storage: dbConfig.storage,
+    host: config.host,
+    dialect: config.dialect as Dialect, // Cast config.dialect to Dialect
+    storage: config.storage, // Required for SQLite
   }
 );
 

@@ -1,0 +1,13 @@
+const path = require('path');
+const config = require(path.resolve('dist', 'config', 'database.js'));
+
+// Add this line to handle the `default` export from TypeScript
+module.exports = config.default || config;
+
+module.exports = {
+  env: process.env.NODE_ENV || 'development',
+  config: path.resolve('dist', 'config', 'database.js'),
+  migrationsPath: path.resolve('migrations'),
+  modelsPath: path.resolve('src', 'models'),
+  seedersPath: path.resolve('seeders'),
+};
