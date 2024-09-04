@@ -92,13 +92,7 @@ DB_STORAGE_PROD=./database.sqlite
 
 ### Running the Project
 
-To start the server in development mode:
-
-```bash
-npm run dev
-```
-
-For a production build, first compile the TypeScript files, then start the server:
+To start the server, first compile the TypeScript files, then start the server:
 
 ```bash
 npm run build
