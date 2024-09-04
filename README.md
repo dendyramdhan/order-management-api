@@ -46,7 +46,7 @@ Ensure you have the following installed:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/order-management-api.git
+   git clone https://github.com/dendyramdhan/order-management-api.git
    cd order-management-api
    ```
 
