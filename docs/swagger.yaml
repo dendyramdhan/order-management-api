@@ -187,14 +187,6 @@ components:
         price:
           type: integer
           description: The price of the product
-        createdAt:
-          type: string
-          format: date-time
-          description: The date the product was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: The date the product was last updated
     Order:
       type: object
       required:

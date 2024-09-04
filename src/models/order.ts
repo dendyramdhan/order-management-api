@@ -9,6 +9,9 @@ class Order extends Model {
   public totalPrice!: number;
   public orderDate!: Date;
 
+  // Define associations as class properties
+  public readonly OrderProducts?: OrderProduct[];
+
   public static initModel(sequelize: Sequelize) {
     Order.init(
       {
