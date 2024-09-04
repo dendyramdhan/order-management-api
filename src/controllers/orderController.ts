@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import { container } from 'tsyringe';
-import { IOrderService } from '../services/interfaces'; // Import the interface
+import { IOrderService } from '../services/interfaces';
 import logger from '../utils/logger';
 import { CreateOrderDto } from '../dtos/CreateOrderDto';
 import { UpdateOrderDto } from '../dtos/UpdateOrderDto';
 
-// Resolve OrderService from the container using the interface
 const orderService = container.resolve<IOrderService>('OrderService');
 
 export const getOrdersController = async (req: Request, res: Response): Promise<void> => {
@@ -18,22 +17,15 @@ export const getOrdersController = async (req: Request, res: Response): Promise<
       parseInt(page as string),
       parseInt(limit as string)
     );
-
-    logger.info('Orders fetched successfully', {
-      customerName,
-      orderDate,
-      total,
-      pages,
-    });
-
-    res.status(200).json({
-      total,
-      pages,
-      data: orders,
-    });
+    logger.info('Orders fetched successfully', { customerName, orderDate, total, pages });
+    res.status(200).json({ total, pages, data: orders });
   } catch (error) {
-    logger.error('Error fetching orders', { error });
-    res.status(500).json({ error: 'Failed to fetch orders' });
+    if (error instanceof Error) {
+      logger.error('Error fetching orders', { error: error.message });
+      res.status(500).json({ error: error.message || 'Failed to fetch orders' });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch orders' });
+    }
   }
 };
 
@@ -51,8 +43,12 @@ export const getOrderDetailsController = async (req: Request, res: Response): Pr
     logger.info('Order details fetched successfully', { orderId: id });
     res.json(order);
   } catch (error) {
-    logger.error('Failed to fetch order details', { error });
-    res.status(500).json({ error: 'Failed to fetch order details' });
+    if (error instanceof Error) {
+      logger.error('Failed to fetch order details', { error: error.message });
+      res.status(500).json({ error: error.message || 'Failed to fetch order details' });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch order details' });
+    }
   }
 };
 
@@ -64,8 +60,12 @@ export const createOrderController = async (req: Request, res: Response): Promis
     logger.info('Order created successfully', { orderId: order.id, customerName: createOrderDto.customerName });
     res.status(201).json(order);
   } catch (error) {
-    logger.error('Error creating order', { error });
-    res.status(500).json({ error: 'Failed to create order' });
+    if (error instanceof Error) {
+      logger.error('Error creating order', { error: error.message });
+      res.status(400).json({ error: error.message || 'Failed to create order' });
+    } else {
+      res.status(400).json({ error: 'Failed to create order' });
+    }
   }
 };
 
@@ -74,13 +74,16 @@ export const editOrderController = async (req: Request, res: Response): Promise<
   const updateOrderDto: UpdateOrderDto = req.body;
 
   try {
-    const customerName = updateOrderDto.customerName || ""; // Default to empty string if undefined
-    const order = await orderService.updateExistingOrder(parseInt(id), customerName, updateOrderDto.products);
-    logger.info('Order updated successfully', { orderId: id, customerName: order.customerName });
+    const order = await orderService.updateExistingOrder(parseInt(id), updateOrderDto.products);
+    logger.info('Order updated successfully', { orderId: id });
     res.json(order);
   } catch (error) {
-    logger.error('Failed to update order', { error });
-    res.status(500).json({ error: 'Failed to update order' });
+    if (error instanceof Error) {
+      logger.error('Failed to update order', { error: error.message });
+      res.status(500).json({ error: error.message || 'Failed to update order' });
+    } else {
+      res.status(500).json({ error: 'Failed to update order' });
+    }
   }
 };
 
@@ -92,7 +95,11 @@ export const deleteOrderController = async (req: Request, res: Response): Promis
     logger.info('Order deleted successfully', { orderId: id });
     res.json(result);
   } catch (error) {
-    logger.error('Failed to delete order', { error });
-    res.status(500).json({ error: 'Failed to delete order' });
+    if (error instanceof Error) {
+      logger.error('Failed to delete order', { error: error.message });
+      res.status(500).json({ error: error.message || 'Failed to delete order' });
+    } else {
+      res.status(500).json({ error: 'Failed to delete order' });
+    }
   }
 };
