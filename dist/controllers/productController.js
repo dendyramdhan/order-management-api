@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getProductsController = void 0;
 const tsyringe_1 = require("tsyringe");
 const logger_1 = __importDefault(require("../utils/logger"));
-// Resolve ProductService from the container using the interface
 const productService = tsyringe_1.container.resolve('ProductService');
 const getProductsController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -24,8 +23,13 @@ const getProductsController = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.json(products);
     }
     catch (error) {
-        logger_1.default.error('Failed to fetch products', { error });
-        res.status(500).json({ error: 'Failed to fetch products' });
+        if (error instanceof Error) {
+            logger_1.default.error('Failed to fetch products', { error: error.message });
+            res.status(500).json({ error: error.message || 'Failed to fetch products' });
+        }
+        else {
+            res.status(500).json({ error: 'Failed to fetch products' });
+        }
     }
 });
 exports.getProductsController = getProductsController;

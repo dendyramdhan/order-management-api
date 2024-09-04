@@ -15,27 +15,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteOrderController = exports.editOrderController = exports.createOrderController = exports.getOrderDetailsController = exports.getOrdersController = void 0;
 const tsyringe_1 = require("tsyringe");
 const logger_1 = __importDefault(require("../utils/logger"));
-// Resolve OrderService from the container using the interface
 const orderService = tsyringe_1.container.resolve('OrderService');
 const getOrdersController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { customerName, orderDate, page = 1, limit = 10 } = req.query;
     try {
         const { total, pages, orders } = yield orderService.getOrders(customerName, orderDate, parseInt(page), parseInt(limit));
-        logger_1.default.info('Orders fetched successfully', {
-            customerName,
-            orderDate,
-            total,
-            pages,
-        });
-        res.status(200).json({
-            total,
-            pages,
-            data: orders,
-        });
+        logger_1.default.info('Orders fetched successfully', { customerName, orderDate, total, pages });
+        res.status(200).json({ total, pages, data: orders });
     }
     catch (error) {
-        logger_1.default.error('Error fetching orders', { error });
-        res.status(500).json({ error: 'Failed to fetch orders' });
+        if (error instanceof Error) {
+            logger_1.default.error('Error fetching orders', { error: error.message });
+            res.status(500).json({ error: error.message || 'Failed to fetch orders' });
+        }
+        else {
+            res.status(500).json({ error: 'Failed to fetch orders' });
+        }
     }
 });
 exports.getOrdersController = getOrdersController;
@@ -52,8 +47,13 @@ const getOrderDetailsController = (req, res) => __awaiter(void 0, void 0, void 0
         res.json(order);
     }
     catch (error) {
-        logger_1.default.error('Failed to fetch order details', { error });
-        res.status(500).json({ error: 'Failed to fetch order details' });
+        if (error instanceof Error) {
+            logger_1.default.error('Failed to fetch order details', { error: error.message });
+            res.status(500).json({ error: error.message || 'Failed to fetch order details' });
+        }
+        else {
+            res.status(500).json({ error: 'Failed to fetch order details' });
+        }
     }
 });
 exports.getOrderDetailsController = getOrderDetailsController;
@@ -65,8 +65,13 @@ const createOrderController = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.status(201).json(order);
     }
     catch (error) {
-        logger_1.default.error('Error creating order', { error });
-        res.status(500).json({ error: 'Failed to create order' });
+        if (error instanceof Error) {
+            logger_1.default.error('Error creating order', { error: error.message });
+            res.status(400).json({ error: error.message || 'Failed to create order' });
+        }
+        else {
+            res.status(400).json({ error: 'Failed to create order' });
+        }
     }
 });
 exports.createOrderController = createOrderController;
@@ -74,14 +79,18 @@ const editOrderController = (req, res) => __awaiter(void 0, void 0, void 0, func
     const { id } = req.params;
     const updateOrderDto = req.body;
     try {
-        const customerName = updateOrderDto.customerName || ""; // Default to empty string if undefined
-        const order = yield orderService.updateExistingOrder(parseInt(id), customerName, updateOrderDto.products);
-        logger_1.default.info('Order updated successfully', { orderId: id, customerName: order.customerName });
+        const order = yield orderService.updateExistingOrder(parseInt(id), updateOrderDto.products);
+        logger_1.default.info('Order updated successfully', { orderId: id });
         res.json(order);
     }
     catch (error) {
-        logger_1.default.error('Failed to update order', { error });
-        res.status(500).json({ error: 'Failed to update order' });
+        if (error instanceof Error) {
+            logger_1.default.error('Failed to update order', { error: error.message });
+            res.status(500).json({ error: error.message || 'Failed to update order' });
+        }
+        else {
+            res.status(500).json({ error: 'Failed to update order' });
+        }
     }
 });
 exports.editOrderController = editOrderController;
@@ -93,8 +102,13 @@ const deleteOrderController = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.json(result);
     }
     catch (error) {
-        logger_1.default.error('Failed to delete order', { error });
-        res.status(500).json({ error: 'Failed to delete order' });
+        if (error instanceof Error) {
+            logger_1.default.error('Failed to delete order', { error: error.message });
+            res.status(500).json({ error: error.message || 'Failed to delete order' });
+        }
+        else {
+            res.status(500).json({ error: 'Failed to delete order' });
+        }
     }
 });
 exports.deleteOrderController = deleteOrderController;

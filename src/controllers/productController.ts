@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
 import { container } from 'tsyringe';
-import { IProductService } from '../services/interfaces'; // Import the interface
+import { IProductService } from '../services/interfaces';
 import logger from '../utils/logger';
 
-// Resolve ProductService from the container using the interface
 const productService = container.resolve<IProductService>('ProductService');
 
 export const getProductsController = async (req: Request, res: Response): Promise<void> => {
@@ -12,7 +11,11 @@ export const getProductsController = async (req: Request, res: Response): Promis
     logger.info('Products fetched successfully', { productsCount: products.length });
     res.json(products);
   } catch (error) {
-    logger.error('Failed to fetch products', { error });
-    res.status(500).json({ error: 'Failed to fetch products' });
+    if (error instanceof Error) {
+      logger.error('Failed to fetch products', { error: error.message });
+      res.status(500).json({ error: error.message || 'Failed to fetch products' });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch products' });
+    }
   }
 };
