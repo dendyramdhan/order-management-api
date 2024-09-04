@@ -61,11 +61,34 @@ Ensure you have the following installed:
 Create a `.env` file in the root directory and configure the following variables:
 
 ```bash
+# Common settings
 NODE_ENV=development
 PORT=3000
-```
 
-The database configuration can be found in `src/config/config.json`.
+# Development database settings
+DB_USERNAME_DEV=root
+DB_PASSWORD_DEV=null
+DB_DATABASE_DEV=database_development
+DB_HOST_DEV=127.0.0.1
+DB_DIALECT_DEV=sqlite
+DB_STORAGE_DEV=./database.sqlite
+
+# Test database settings
+DB_USERNAME_TEST=root
+DB_PASSWORD_TEST=null
+DB_DATABASE_TEST=database_test
+DB_HOST_TEST=127.0.0.1
+DB_DIALECT_TEST=sqlite
+DB_STORAGE_TEST=:memory:
+
+# Production database settings
+DB_USERNAME_PROD=root
+DB_PASSWORD_PROD=null
+DB_DATABASE_PROD=database_production
+DB_HOST_PROD=127.0.0.1
+DB_DIALECT_PROD=sqlite
+DB_STORAGE_PROD=./database.sqlite
+```
 
 ### Running the Project
 
