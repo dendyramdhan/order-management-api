@@ -51,12 +51,6 @@ coverage/
 swagger.json
 swagger.yaml
 
-# Optional: Ignore all config files except the specific environment config
-# You might want to keep your production config but ignore others
-config/*
-!config/production.json
-!config/config.json
-
 # Optional: Ignore compiled views if using a template engine
 views/**/*.js
 
