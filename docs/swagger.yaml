@@ -201,8 +201,15 @@ components:
           description: The name of the customer
         totalProducts:
           type: integer
-          description: The price of the product
-    Order:
+          description: The total number of products in the order
+        totalPrice:
+          type: integer
+          description: The total price of the order
+        orderDate:
+          type: string
+          format: date-time
+          description: The date the order was created
+    OrderDetailDto:
       type: object
       properties:
         orderId:
