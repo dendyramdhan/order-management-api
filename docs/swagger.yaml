@@ -35,13 +35,11 @@ paths:
           description: Number of results per page
       responses:
         '200':
-          description: A list of orders
+          description: A paginated list of orders
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/PaginatedOrdersResponse'
         '500':
           description: Server error
     post:
@@ -71,7 +69,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderDetailDto'
         '400':
           description: Invalid input
         '500':
@@ -89,11 +87,11 @@ paths:
           description: The order ID
       responses:
         '200':
-          description: Order data
+          description: Order details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderDetailDto'
         '404':
           description: Order not found
         '500':
@@ -130,7 +128,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/OrderDetailDto'
         '400':
           description: Invalid input
         '404':
@@ -149,7 +147,15 @@ paths:
           description: The order ID
       responses:
         '200':
-          description: The deleted order
+          description: Success message after deletion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the deletion was successful
         '404':
           description: Order not found
         '500':
@@ -171,47 +177,82 @@ paths:
           description: Server error
 components:
   schemas:
-    Product:
+    PaginatedOrdersResponse:
       type: object
-      required:
-        - id
-        - name
-        - price
       properties:
-        id:
+        total:
           type: integer
-          description: The auto-generated id of the product
-        name:
+          description: Total number of orders
+        pages:
+          type: integer
+          description: Total number of pages
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderSummaryDto'
+    OrderSummaryDto:
+      type: object
+      properties:
+        orderId:
           type: string
-          description: The name of the product
-        price:
+          description: The ID of the order
+        customerName:
+          type: string
+          description: The name of the customer
+        totalProducts:
           type: integer
-          description: The price of the product
-    Order:
+          description: The total number of products in the order
+        totalPrice:
+          type: integer
+          description: The total price of the order
+        orderDate:
+          type: string
+          format: date-time
+          description: The date the order was created
+    OrderDetailDto:
       type: object
-      required:
-        - id
-        - customerName
-        - totalPrice
       properties:
-        id:
-          type: integer
-          description: The auto-generated id of the order
+        orderId:
+          type: string
+          description: The ID of the order
         customerName:
           type: string
           description: The name of the customer
         totalPrice:
           type: integer
           description: The total price of the order
-        createdAt:
+        orderDate:
           type: string
           format: date-time
           description: The date the order was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: The date the order was last updated
         products:
           type: array
           items:
-            $ref: '#/components/schemas/Product'
+            $ref: '#/components/schemas/OrderProductDetailDto'
+    OrderProductDetailDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the product
+        price:
+          type: integer
+          description: The price of the product
+        quantity:
+          type: integer
+          description: The quantity of the product ordered
+        totalProductPrice:
+          type: integer
+          description: The total price for this product (price * quantity)
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The ID of the product
+        name:
+          type: string
+          description: The name of the product
+        price:
+          type: integer
+          description: The price of the product
