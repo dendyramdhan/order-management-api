@@ -8,6 +8,10 @@ import orderRoutes from './routes/orderRoutes';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yamljs';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env
+dotenv.config();
 
 const app = express();
 app.use(express.json());
