@@ -41,7 +41,7 @@ export class OrderService implements IOrderService {
       return { total, pages: Math.ceil(total / limit), orders };
     } catch (error) {
       logger.error('Failed to fetch orders', { error });
-      throw new Error('Failed to fetch orders');
+      throw new Error((error as Error).message || 'Failed to fetch orders');
     }
   }
 
@@ -59,7 +59,7 @@ export class OrderService implements IOrderService {
       return order;
     } catch (error) {
       logger.error('Failed to fetch order details', { error });
-      throw new Error('Failed to fetch order details');
+      throw new Error((error as Error).message || 'Failed to fetch order details');
     }
   }
 
@@ -174,8 +174,8 @@ export class OrderService implements IOrderService {
   
       await this.orderRepository.deleteOrderProducts(orderId, transaction);
       await this.orderRepository.deleteOrderById(orderId, transaction);
-      await transaction.commit();
-  
+      
+      await transaction.commit(); // Commit the transaction if everything is successful
       logger.info('Order deleted successfully', { orderId });
   
       return { success: true };

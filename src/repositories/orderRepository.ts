@@ -25,10 +25,8 @@ export class OrderRepository implements IOrderRepository {
     return Order.count({ where: whereClause });
   }
 
-  findOrderById(orderId: number): Promise<Order | null> {
-    return Order.findByPk(orderId, {
-      include: [OrderProduct],
-    });
+  findOrderById(orderId: number, transaction?: Transaction): Promise<Order | null> {
+    return Order.findByPk(orderId, { transaction });
   }
 
   createOrder(customerName: string, transaction?: Transaction): Promise<Order> {
@@ -39,8 +37,11 @@ export class OrderRepository implements IOrderRepository {
     return order.save({ transaction });
   }
 
-  deleteOrderById(orderId: number): Promise<number> {
-    return Order.destroy({ where: { id: orderId } });
+  deleteOrderById(orderId: number, transaction?: Transaction): Promise<number> {
+    return Order.destroy({
+      where: { id: orderId },
+      transaction,
+    });
   }
 
   deleteOrderProducts(orderId: number, transaction?: Transaction): Promise<number> {
