@@ -1,7 +1,9 @@
 import { inject, injectable } from 'tsyringe';
 import { IProductRepository } from '../repositories/interfaces';
 import { IProductService } from './interfaces'; // Import the IProductService interface
+import { ProductDto } from '../dtos/ProductDto'; // Import the ProductDto
 import logger from '../utils/logger'; // Import the logger
+import { Product } from '../types/product'; // Sequelize model
 
 @injectable()
 export class ProductService implements IProductService {
@@ -14,7 +16,9 @@ export class ProductService implements IProductService {
       logger.info('Fetching products');
       const products = await this.productRepository.findAllProducts();
       logger.info('Products fetched successfully', { productsCount: products.length });
-      return products;
+      
+      // Map the products to the ProductDto
+      return products.map((product: Product) => new ProductDto(product.id, product.name, product.price));
     } catch (error) {
       logger.error('Error fetching products', { error });
       throw new Error('Failed to fetch products');
@@ -32,7 +36,9 @@ export class ProductService implements IProductService {
       }
 
       logger.info('Product details fetched successfully', { productId });
-      return product;
+
+      // Return the product as a ProductDto
+      return new ProductDto(product.id, product.name, product.price);
     } catch (error) {
       logger.error('Error fetching product details', { productId, error });
       throw new Error('Failed to fetch product details');

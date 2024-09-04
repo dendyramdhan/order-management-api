@@ -8,6 +8,9 @@ class OrderProduct extends Model {
   public quantity!: number;
   public totalPrice!: number;
 
+  // Define associations as class properties
+  public readonly Product?: Product;
+
   public static initModel(sequelize: Sequelize) {
     OrderProduct.init(
       {

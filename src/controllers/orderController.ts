@@ -11,14 +11,18 @@ export const getOrdersController = async (req: Request, res: Response): Promise<
   const { customerName, orderDate, page = 1, limit = 10 } = req.query;
 
   try {
-    const { total, pages, orders } = await orderService.getOrders(
+    // Correctly destructure `data` instead of `orders`
+    const { total, pages, data } = await orderService.getOrders(
       customerName as string,
       orderDate as string,
       parseInt(page as string),
       parseInt(limit as string)
     );
+    
     logger.info('Orders fetched successfully', { customerName, orderDate, total, pages });
-    res.status(200).json({ total, pages, data: orders });
+    
+    // Return the response with the correctly structured data
+    res.status(200).json({ total, pages, data });
   } catch (error) {
     if (error instanceof Error) {
       logger.error('Error fetching orders', { error: error.message });

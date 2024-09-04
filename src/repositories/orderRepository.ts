@@ -26,7 +26,15 @@ export class OrderRepository implements IOrderRepository {
   }
 
   findOrderById(orderId: number, transaction?: Transaction): Promise<Order | null> {
-    return Order.findByPk(orderId, { transaction });
+    return Order.findByPk(orderId, {
+      include: [
+        {
+          model: OrderProduct,
+          include: [Product],
+        },
+      ],
+      transaction,
+    });
   }
 
   createOrder(customerName: string, transaction?: Transaction): Promise<Order> {
