@@ -21,7 +21,7 @@ export class ProductService implements IProductService {
       return products.map((product: Product) => new ProductDto(product.id, product.name, product.price));
     } catch (error) {
       logger.error('Error fetching products', { error });
-      throw new Error('Failed to fetch products');
+      throw new Error((error as Error).message || 'Failed to fetch products');
     }
   }
 
@@ -41,7 +41,7 @@ export class ProductService implements IProductService {
       return new ProductDto(product.id, product.name, product.price);
     } catch (error) {
       logger.error('Error fetching product details', { productId, error });
-      throw new Error('Failed to fetch product details');
+      throw new Error((error as Error).message || 'Failed to fetch product details');
     }
   }
 }

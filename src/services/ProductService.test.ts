@@ -41,6 +41,36 @@ describe('ProductService', () => {
     when(mockedProductRepository.findAllProducts()).thenReject(new Error('Database error'));
 
     // Act & Assert
-    await expect(productService.getProducts()).rejects.toThrow('Failed to fetch products');
+    await expect(productService.getProducts()).rejects.toThrow('Database error');
+  });
+
+  it('should fetch product by ID and map it to ProductDto', async () => {
+    // Arrange
+    const product = Product.build({ id: 1, name: 'Product 1', price: 100 }); // Sequelize product instance
+
+    // Mock the repository behavior
+    when(mockedProductRepository.findProductById(1)).thenResolve(product);
+
+    // Act
+    const result = await productService.getProductById(1);
+
+    // Assert
+    expect(result).toEqual(new ProductDto(1, 'Product 1', 100));
+  });
+
+  it('should throw an error when product is not found', async () => {
+    // Arrange
+    when(mockedProductRepository.findProductById(999)).thenResolve(null); // No product found
+
+    // Act & Assert
+    await expect(productService.getProductById(999)).rejects.toThrow('Product not found');
+  });
+
+  it('should handle repository errors and throw an error', async () => {
+    // Arrange
+    when(mockedProductRepository.findProductById(1)).thenReject(new Error('Database error'));
+
+    // Act & Assert
+    await expect(productService.getProductById(1)).rejects.toThrow('Database error');
   });
 });
